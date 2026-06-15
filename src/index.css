@@ -1,0 +1,232 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.6;
+  font-weight: 400;
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.95);
+  background-color: #0E1428;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0E1428 0%, #171A21 50%, #080B14 100%);
+  background-attachment: fixed;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(22, 93, 255, 0.4);
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(22, 93, 255, 0.6);
+}
+
+/* 玻璃态效果 */
+.glass-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+  border-color: rgba(22, 93, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* 渐变边框 */
+.gradient-border {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  border-radius: 12px;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #165DFF, #0FC6C2);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* 数字动画 */
+.count-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 脉冲动画 */
+.pulse-warning {
+  animation: pulse-warning 2s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 63, 63, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(245, 63, 63, 0);
+  }
+}
+
+/* 背景网格 */
+.bg-grid {
+  background-image: 
+    linear-gradient(rgba(22, 93, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(22, 93, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Ant Design 主题覆盖 */
+:where(.css-dev-only-do-not-override-12upa3x).ant-btn-primary {
+  background: linear-gradient(135deg, #165DFF, #0E42D2);
+  border: none;
+  box-shadow: 0 4px 12px rgba(22, 93, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-btn-primary:hover {
+  background: linear-gradient(135deg, #2E97FF, #165DFF);
+  box-shadow: 0 6px 20px rgba(22, 93, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-table-wrapper .ant-table-thead > tr > th {
+  background: rgba(22, 93, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(22, 93, 255, 0.2);
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-table-wrapper .ant-table-tbody > tr > td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-table-wrapper .ant-table-tbody > tr:hover > td {
+  background: rgba(22, 93, 255, 0.05);
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-select-dropdown,
+:where(.css-dev-only-do-not-override-12upa3x).ant-picker-dropdown,
+:where(.css-dev-only-do-not-override-12upa3x).ant-dropdown {
+  background: #1D2129;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background: rgba(22, 93, 255, 0.2);
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-input,
+:where(.css-dev-only-do-not-override-12upa3x).ant-select-selector,
+:where(.css-dev-only-do-not-override-12upa3x).ant-picker {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-input::placeholder,
+:where(.css-dev-only-do-not-override-12upa3x).ant-select-selection-placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-input-affix-wrapper {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-modal-content,
+:where(.css-dev-only-do-not-override-12upa3x).ant-drawer-content {
+  background: #171A21;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-modal-header,
+:where(.css-dev-only-do-not-override-12upa3x).ant-drawer-header {
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-modal-title,
+:where(.css-dev-only-do-not-override-12upa3x).ant-drawer-title {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-steps .ant-steps-item-title,
+:where(.css-dev-only-do-not-override-12upa3x).ant-steps .ant-steps-item-description {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-tabs .ant-tabs-tab {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-tabs .ant-tabs-tab-active {
+  color: #165DFF;
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-tabs .ant-tabs-ink-bar {
+  background: #165DFF;
+}
+
+:where(.css-dev-only-do-not-override-12upa3x).ant-badge-status-dot {
+  width: 8px;
+  height: 8px;
+}
+
+/* ECharts 响应式 */
+.echarts-container {
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+}
+
+/* 动画延迟类 */
+.animation-delay-100 { animation-delay: 100ms; }
+.animation-delay-200 { animation-delay: 200ms; }
+.animation-delay-300 { animation-delay: 300ms; }
+.animation-delay-400 { animation-delay: 400ms; }
+.animation-delay-500 { animation-delay: 500ms; }
+.animation-delay-600 { animation-delay: 600ms; }
+.animation-delay-700 { animation-delay: 700ms; }
+.animation-delay-800 { animation-delay: 800ms; }
