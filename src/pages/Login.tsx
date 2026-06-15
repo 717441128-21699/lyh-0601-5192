@@ -15,9 +15,9 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { login, user, isLoading: authLoading } = useAuthStore();
-  const { initData, isLoading: dataLoading } = useDataStore();
-  const { initData: initWarnings } = useWarningStore();
-  const { initData: initReports } = useReportStore();
+  const { ensureData, isLoading: dataLoading } = useDataStore();
+  const { ensureData: ensureWarnings } = useWarningStore();
+  const { ensureData: ensureReports } = useReportStore();
 
   useEffect(() => {
     if (user) {
@@ -52,9 +52,9 @@ export default function Login() {
       const success = await login(values.username, values.password, values.role);
       if (success) {
         message.success('登录成功');
-        initData();
-        initWarnings();
-        initReports();
+        ensureData();
+        ensureWarnings();
+        ensureReports();
         setTimeout(() => navigate('/dashboard'), 500);
       } else {
         message.error('用户名或密码错误');

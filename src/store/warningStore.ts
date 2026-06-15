@@ -7,7 +7,9 @@ import type { Warning, WarningFilters, ApprovalRecord, User } from '../types';
 interface WarningState {
   warnings: Warning[];
   isLoading: boolean;
+  isHydrated: boolean;
   initData: () => void;
+  ensureData: () => void;
   getWarnings: (filters?: WarningFilters) => Warning[];
   getWarningDetail: (warningId: string) => Warning | null;
   universityConfirm: (warningId: string, comment: string, user: User) => Warning | null;
@@ -29,7 +31,8 @@ export const useWarningStore = create<WarningState>()(
   persist(
     (set, get) => ({
       warnings: [],
-      isLoading: true,
+      isLoading: false,
+      isHydrated: false,
 
       initData: () => {
         const data = generateAllData();
@@ -37,6 +40,15 @@ export const useWarningStore = create<WarningState>()(
           warnings: data.warnings,
           isLoading: false,
         });
+      },
+
+      ensureData: () => {
+        const state = get();
+        if (state.warnings.length === 0) {
+          state.initData();
+        } else {
+          set({ isLoading: false });
+        }
       },
 
       getWarnings: (filters) => {
@@ -171,6 +183,17 @@ export const useWarningStore = create<WarningState>()(
       partialize: (state) => ({
         warnings: state.warnings,
       }),
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.error('Warning store rehydration error:', error);
+        }
+        if (state) {
+          state.isHydrated = true;
+          if (state.warnings.length > 0) {
+            state.isLoading = false;
+          }
+        }
+      },
     }
   )
 );

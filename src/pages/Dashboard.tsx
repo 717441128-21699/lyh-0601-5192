@@ -11,6 +11,7 @@ import WarningStats from '@/components/WarningStats';
 import { useDataStore } from '@/store/dataStore';
 import { useAuthStore } from '@/store/authStore';
 import { useWarningStore } from '@/store/warningStore';
+import { useReportStore } from '@/store/reportStore';
 import { formatNumber, formatPercent, hasPermission, getRoleName } from '@/utils';
 import type { HeatmapItem, RankingItem, TrendData } from '@/types';
 
@@ -19,24 +20,32 @@ const { Option } = Select;
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { provinces, universities, disciplines, isLoading, initData, getHeatmapData, getEmploymentRanking } = useDataStore();
-  const { getStatistics } = useWarningStore();
+  const { provinces, universities, disciplines, isLoading, initData, ensureData, getHeatmapData, getEmploymentRanking } = useDataStore();
+  const { ensureData: ensureWarnings, getStatistics } = useWarningStore();
+  const { ensureData: ensureReports } = useReportStore();
   const [rankingType, setRankingType] = useState<'discipline' | 'province' | 'university'>('university');
   const [heatmapData, setHeatmapData] = useState<HeatmapItem[]>([]);
   const [rankingData, setRankingData] = useState<RankingItem[]>([]);
   const [trendData, setTrendData] = useState<TrendData[]>([]);
 
   useEffect(() => {
-    if (provinces.length === 0) {
-      initData();
-    }
-  }, [provinces.length, initData]);
+    ensureData();
+    ensureWarnings();
+    ensureReports();
+  }, [ensureData, ensureWarnings, ensureReports]);
 
   useEffect(() => {
     if (provinces.length > 0) {
       setHeatmapData(getHeatmapData());
-      setRankingData(getEmploymentRanking(rankingType, 10));
+    }
+  }, [provinces, getHeatmapData]);
 
+  useEffect(() => {
+    setRankingData(getEmploymentRanking(rankingType, 10));
+  }, [rankingType, getEmploymentRanking, provinces, universities, disciplines]);
+
+  useEffect(() => {
+    if (provinces.length > 0 && trendData.length === 0) {
       const baseYear = 2020;
       const trends: TrendData[] = [];
       for (let i = 0; i < 5; i++) {
@@ -51,7 +60,7 @@ export default function Dashboard() {
       }
       setTrendData(trends);
     }
-  }, [provinces, getHeatmapData, getEmploymentRanking, rankingType]);
+  }, [provinces, trendData.length]);
 
   const handleProvinceClick = (provinceId: string) => {
     navigate(`/province/${provinceId}`);
@@ -243,7 +252,12 @@ export default function Dashboard() {
             }
             styles={{ body: { padding: '20px' } }}
           >
-            <RankingList title="就业排名榜" data={rankingData} type={rankingType} />
+            <RankingList
+              title="就业排名榜"
+              data={rankingData}
+              type={rankingType}
+              onTypeChange={setRankingType}
+            />
           </Card>
         </Col>
         <Col xs={24} lg={12}>

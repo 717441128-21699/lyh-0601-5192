@@ -30,7 +30,7 @@ export const useAuthStore = create<AuthState>()(
             username: 'ministry',
             name: '教育部管理员',
             role: 'ministry',
-            permissions: ['dashboard:view', 'data:view:*', 'warning:*', 'report:*', 'curriculum:view', 'ingestion:*'],
+            permissions: ['dashboard:view', 'data:view:*', 'warning:*', 'report:*', 'curriculum:*', 'ingestion:*'],
           },
           provincial: {
             id: 'user_provincial_11',
@@ -38,7 +38,16 @@ export const useAuthStore = create<AuthState>()(
             name: '北京市教育厅管理员',
             role: 'provincial',
             provinceId: '11',
-            permissions: ['dashboard:view', 'data:view', 'warning:review:11', 'report:generate', 'curriculum:view'],
+            permissions: [
+              'dashboard:view',
+              'data:view',
+              'warning:view',
+              'warning:review:11',
+              'warning:review',
+              'report:view',
+              'report:generate',
+              'curriculum:view',
+            ],
           },
           university: {
             id: 'user_university_u_11_0',
@@ -47,7 +56,16 @@ export const useAuthStore = create<AuthState>()(
             role: 'university',
             provinceId: '11',
             universityId: 'u_11_0',
-            permissions: ['dashboard:view', 'data:view', 'warning:confirm:u_11_0', 'report:view', 'curriculum:upload'],
+            permissions: [
+              'dashboard:view',
+              'data:view',
+              'warning:view',
+              'warning:confirm:u_11_0',
+              'warning:confirm',
+              'report:view',
+              'curriculum:view',
+              'curriculum:upload',
+            ],
           },
         };
 

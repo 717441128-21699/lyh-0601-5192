@@ -20,6 +20,7 @@ export interface Province {
   graduationRate: number;
   employmentRate: number;
   majorMatchRate: number;
+  universityCount?: number;
 }
 
 export type UniversityLevel = '985' | '211' | 'double-first-class' | 'general';
@@ -44,6 +45,7 @@ export interface Discipline {
   category: string;
   employmentRate: number;
   nationalAverage: number;
+  coursePassRate?: number;
 }
 
 export interface TrendData {
@@ -156,6 +158,7 @@ export interface RankingItem {
   value: number;
   rank: number;
   change?: number;
+  subtitle?: string;
 }
 
 export interface HeatmapItem {
@@ -209,6 +212,7 @@ export interface ImportRecord {
   fileName?: string;
   importTime: string;
   recordCount: number;
+  cleanedCount?: number;
   status: 'success' | 'partial' | 'failed';
   operator: string;
 }

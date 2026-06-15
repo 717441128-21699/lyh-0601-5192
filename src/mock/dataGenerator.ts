@@ -133,6 +133,16 @@ const randomInRange = (min: number, max: number, decimals: number = 2): number =
   return Number((Math.random() * (max - min) + min).toFixed(decimals));
 };
 
+const getUniversityLevelShortName = (level: UniversityLevel): string => {
+  const map: Record<UniversityLevel, string> = {
+    '985': '985',
+    '211': '211',
+    'double-first-class': '双一流',
+    'general': '普通本科',
+  };
+  return map[level] || level;
+};
+
 const randomInt = (min: number, max: number): number => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 };
@@ -245,11 +255,16 @@ export const generateWarnings = (
     const university = randomItem(provinceUnivs);
     const discipline = randomItem(disciplines);
     const status = randomItem(statuses);
-    const level = status === 'approved' || status === 'rejected' ? 'level1' : randomItem(levels);
 
     const nationalAvg = discipline.nationalAverage;
-    const employmentRate = randomInRange(nationalAvg * 0.7, nationalAvg * 0.79);
+    const consecutiveYears = randomInt(2, 4);
+    const isBelow20Percent = consecutiveYears >= 2;
+    const employmentRate = isBelow20Percent
+      ? randomInRange(nationalAvg * 0.70, nationalAvg * 0.79)
+      : randomInRange(nationalAvg * 0.80, nationalAvg * 0.95);
     const deviationPercent = ((nationalAvg - employmentRate) / nationalAvg) * 100;
+
+    const level: WarningLevel = isBelow20Percent ? 'level1' : randomItem(['level2', 'level3']);
 
     const warning: Warning = {
       id: `w_${generateId()}`,
@@ -260,7 +275,7 @@ export const generateWarnings = (
       employmentRate,
       nationalAverage: nationalAvg,
       deviationPercent,
-      consecutiveYears: randomInt(2, 4),
+      consecutiveYears,
       status,
       createdAt: new Date(Date.now() - randomInt(1, 90) * 24 * 60 * 60 * 1000).toISOString(),
       approvalHistory: [],
@@ -461,6 +476,7 @@ export const generateRankings = (
         value: p.employmentRate,
         rank: 0,
         change: randomInRange(-5, 5, 1),
+        subtitle: `${p.universityCount || 0}所高校`,
       }))
       .sort((a, b) => b.value - a.value)
       .map((item, idx) => ({ ...item, rank: idx + 1 }));
@@ -473,6 +489,7 @@ export const generateRankings = (
         value: u.employmentRate,
         rank: 0,
         change: randomInRange(-10, 10, 1),
+        subtitle: u.level ? getUniversityLevelShortName(u.level) : '',
       }))
       .sort((a, b) => b.value - a.value)
       .map((item, idx) => ({ ...item, rank: idx + 1 }));
@@ -484,6 +501,7 @@ export const generateRankings = (
         value: d.employmentRate,
         rank: 0,
         change: randomInRange(-3, 3, 1),
+        subtitle: d.category || '',
       }))
       .sort((a, b) => b.value - a.value)
       .map((item, idx) => ({ ...item, rank: idx + 1 }));
@@ -554,11 +572,15 @@ export const generateDataQualityMetrics = (): DataQualityMetrics => {
 export const generateAllData = () => {
   const provinces = generateProvinces();
   const universities = generateUniversities(provinces);
+  const provincesWithCounts = provinces.map((p) => ({
+    ...p,
+    universityCount: universities.filter((u) => u.provinceId === p.id).length,
+  }));
   const disciplines = generateDisciplines();
-  const warnings = generateWarnings(provinces, universities, disciplines);
+  const warnings = generateWarnings(provincesWithCounts, universities, disciplines);
   const courses = generateCourses();
-  const reports = generateReports(provinces, universities);
-  const users = generateUsers(provinces, universities);
+  const reports = generateReports(provincesWithCounts, universities);
+  const users = generateUsers(provincesWithCounts, universities);
   const trendData = generateTrendData();
   const dataSources = generateDataSources();
   const importRecords = generateImportRecords();
@@ -566,7 +588,7 @@ export const generateAllData = () => {
   const dataQualityMetrics = generateDataQualityMetrics();
 
   return {
-    provinces,
+    provinces: provincesWithCounts,
     universities,
     disciplines,
     warnings,

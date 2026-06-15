@@ -54,7 +54,7 @@ const { Option } = Select;
 export default function WarningCenter() {
   const { user } = useAuthStore();
   const { provinces, universities, disciplines } = useDataStore();
-  const { warnings, isLoading, initData, getWarnings, universityConfirm, provincialReview, ministryApprove, getStatistics } = useWarningStore();
+  const { warnings, isLoading, initData, ensureData, getWarnings, getWarningDetail, universityConfirm, provincialReview, ministryApprove, getStatistics } = useWarningStore();
   const [filteredWarnings, setFilteredWarnings] = useState<Warning[]>([]);
   const [selectedWarning, setSelectedWarning] = useState<Warning | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -65,10 +65,8 @@ export default function WarningCenter() {
   const [form] = Form.useForm();
 
   useEffect(() => {
-    if (warnings.length === 0) {
-      initData();
-    }
-  }, [warnings.length, initData]);
+    ensureData();
+  }, [ensureData]);
 
   useEffect(() => {
     let filtered = getWarnings(filters);
@@ -107,18 +105,24 @@ export default function WarningCenter() {
       
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      let updated: Warning | null = null;
+      
       if (actionType === 'confirm') {
-        universityConfirm(selectedWarning.id, values.comment, user);
+        updated = universityConfirm(selectedWarning.id, values.comment, user);
       } else if (actionType === 'review') {
-        provincialReview(selectedWarning.id, true, values.comment, user);
+        updated = provincialReview(selectedWarning.id, true, values.comment, user);
       } else if (actionType === 'approve') {
-        ministryApprove(selectedWarning.id, true, values.comment, user);
+        updated = ministryApprove(selectedWarning.id, true, values.comment, user);
       } else if (actionType === 'reject') {
         if (selectedWarning.status === 'pending_provincial') {
-          provincialReview(selectedWarning.id, false, values.comment, user);
+          updated = provincialReview(selectedWarning.id, false, values.comment, user);
         } else if (selectedWarning.status === 'pending_ministry') {
-          ministryApprove(selectedWarning.id, false, values.comment, user);
+          updated = ministryApprove(selectedWarning.id, false, values.comment, user);
         }
+      }
+      
+      if (updated && detailModalVisible) {
+        setSelectedWarning(updated);
       }
       
       setActionModalVisible(false);

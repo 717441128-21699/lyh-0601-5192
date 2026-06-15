@@ -7,7 +7,9 @@ import type { Report, ReportFilters, ReportType, ReportScope, TrendData, Employm
 interface ReportState {
   reports: Report[];
   isLoading: boolean;
+  isHydrated: boolean;
   initData: () => void;
+  ensureData: () => void;
   getReports: (filters?: ReportFilters) => Report[];
   getReportDetail: (reportId: string) => Report | null;
   generateReport: (type: ReportType, scope: ReportScope, scopeId?: string) => Promise<Report>;
@@ -18,7 +20,8 @@ export const useReportStore = create<ReportState>()(
   persist(
     (set, get) => ({
       reports: [],
-      isLoading: true,
+      isLoading: false,
+      isHydrated: false,
 
       initData: () => {
         const data = generateAllData();
@@ -26,6 +29,15 @@ export const useReportStore = create<ReportState>()(
           reports: data.reports,
           isLoading: false,
         });
+      },
+
+      ensureData: () => {
+        const state = get();
+        if (state.reports.length === 0) {
+          state.initData();
+        } else {
+          set({ isLoading: false });
+        }
       },
 
       getReports: (filters) => {
@@ -130,6 +142,17 @@ export const useReportStore = create<ReportState>()(
       partialize: (state) => ({
         reports: state.reports,
       }),
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.error('Report store rehydration error:', error);
+        }
+        if (state) {
+          state.isHydrated = true;
+          if (state.reports.length > 0) {
+            state.isLoading = false;
+          }
+        }
+      },
     }
   )
 );

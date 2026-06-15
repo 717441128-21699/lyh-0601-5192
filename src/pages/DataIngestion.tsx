@@ -18,6 +18,11 @@ import {
   Badge,
   Descriptions,
   message,
+  Form,
+  Select,
+  InputNumber,
+  Steps,
+  Divider,
 } from 'antd';
 import {
   Database,
@@ -34,13 +39,19 @@ import {
   Activity,
   ShieldCheck,
   Zap,
+  FileSpreadsheet,
+  ChevronRight,
+  BarChart3,
 } from 'lucide-react';
 import { useDataStore } from '@/store/dataStore';
 import {
   formatDateTime,
   formatNumber,
+  formatPercent,
 } from '@/utils';
 import type { DataSource, ImportRecord, CleaningRule, DataQualityMetrics } from '@/types';
+
+const { Option } = Select;
 
 export default function DataIngestion() {
   const {
@@ -50,26 +61,48 @@ export default function DataIngestion() {
     dataQualityMetrics,
     isLoading,
     initData,
+    ensureData,
     toggleCleaningRule,
     runImport,
   } = useDataStore();
   const [runningImport, setRunningImport] = useState<string | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedSource, setSelectedSource] = useState<DataSource | null>(null);
+  const [importModalVisible, setImportModalVisible] = useState(false);
+  const [importingSource, setImportingSource] = useState<DataSource | null>(null);
+  const [importStep, setImportStep] = useState(0);
+  const [importResult, setImportResult] = useState<null | {
+    count: number;
+    cleanedCount: number;
+    invalidCount: number;
+    duplicateCount: number;
+    updatedMetrics: Record<string, { old: number; new: number; delta: number }>;
+  }>(null);
+  const [importForm] = Form.useForm();
 
   useEffect(() => {
-    if (dataSources.length === 0) {
-      initData();
-    }
-  }, [dataSources.length, initData]);
+    ensureData();
+  }, [ensureData]);
 
-  const handleRunImport = async (sourceId: string) => {
+  const handleRunImport = async (sourceId: string, options?: { importCount?: number; fileName?: string }) => {
     setRunningImport(sourceId);
+    setImportStep(0);
     try {
-      const result = await runImport(sourceId);
-      message.success(`成功导入 ${formatNumber(result.count)} 条记录`);
+      setImportStep(1);
+      const result = await runImport(sourceId, options);
+      setImportStep(2);
+      setImportResult({
+        count: result.count,
+        cleanedCount: result.cleanedCount,
+        invalidCount: result.invalidCount,
+        duplicateCount: result.duplicateCount,
+        updatedMetrics: result.updatedMetrics,
+      });
+      setImportStep(3);
+      message.success(`成功导入 ${formatNumber(result.count)} 条记录，清洗后 ${formatNumber(result.cleanedCount)} 条有效`);
     } catch (error) {
       message.error('导入失败');
+      setImportStep(0);
     } finally {
       setRunningImport(null);
     }
@@ -78,6 +111,33 @@ export default function DataIngestion() {
   const handleViewDetail = (source: DataSource) => {
     setSelectedSource(source);
     setDetailModalVisible(true);
+  };
+
+  const handleOpenImport = (source: DataSource) => {
+    setImportingSource(source);
+    setImportStep(0);
+    setImportResult(null);
+    importForm.setFieldsValue({
+      recordCount: 5000,
+      fileName: `${source.name}_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`,
+    });
+    setImportModalVisible(true);
+  };
+
+  const handleSubmitImport = async () => {
+    if (!importingSource) return;
+    const values = await importForm.validateFields();
+    await handleRunImport(importingSource.id, {
+      importCount: values.recordCount,
+      fileName: values.fileName,
+    });
+  };
+
+  const handleCloseImportModal = () => {
+    setImportModalVisible(false);
+    setImportStep(0);
+    setImportResult(null);
+    setImportingSource(null);
   };
 
   const getStatusColor = (status: string) => {
@@ -149,6 +209,31 @@ export default function DataIngestion() {
     }
   };
 
+  const getMetricSummary = () => {
+    if (!importResult) return [];
+    const entries = Object.entries(importResult.updatedMetrics).slice(0, 8);
+    return entries.map(([key, val]) => {
+      const parts = key.split('_');
+      const type = parts[0];
+      const id = parts[1];
+      const metric = parts.slice(2).join('_');
+      const metricNameMap: Record<string, string> = {
+        enrollment: '招生人数',
+        registrationRate: '报到率',
+        coursePassRate: '课程通过率',
+        graduationRate: '毕业率',
+        employmentRate: '就业率',
+      };
+      return {
+        key,
+        entity: type === 'province' ? '省份' : type === 'discipline' ? '学科' : type,
+        id,
+        metric: metricNameMap[metric] || metric,
+        ...val,
+      };
+    });
+  };
+
   const sourceColumns = [
     {
       title: '数据源',
@@ -204,7 +289,7 @@ export default function DataIngestion() {
     {
       title: '操作',
       key: 'action',
-      width: 200,
+      width: 260,
       render: (_: unknown, record: DataSource) => (
         <Space size="small">
           <Tooltip title="查看详情">
@@ -215,26 +300,28 @@ export default function DataIngestion() {
               onClick={() => handleViewDetail(record)}
             />
           </Tooltip>
-          <Tooltip title="手动同步">
-            <Button
-              type="text"
-              size="small"
-              icon={<RefreshCw size={16} className={runningImport === record.id ? 'animate-spin' : ''} />}
-              onClick={() => handleRunImport(record.id)}
-              loading={runningImport === record.id}
-              disabled={record.status !== 'active'}
-            />
-          </Tooltip>
-          <Tooltip title="立即导入">
+          <Tooltip title="文件上传导入">
             <Button
               type="primary"
+              size="small"
+              icon={<Upload size={16} />}
+              onClick={() => handleOpenImport(record)}
+              loading={runningImport === record.id}
+              disabled={record.status !== 'active'}
+              ghost
+            >
+              导入
+            </Button>
+          </Tooltip>
+          <Tooltip title="快速同步">
+            <Button
               size="small"
               icon={<Play size={16} />}
               onClick={() => handleRunImport(record.id)}
               loading={runningImport === record.id}
               disabled={record.status !== 'active'}
             >
-              导入
+              同步
             </Button>
           </Tooltip>
         </Space>
@@ -254,16 +341,39 @@ export default function DataIngestion() {
       dataIndex: 'fileName',
       key: 'fileName',
       render: (text?: string) => (
-        <span className="text-gray-400">{text || '-'}</span>
+        <span className="text-gray-400">
+          {text ? (
+            <span className="flex items-center gap-1">
+              <FileSpreadsheet size={12} className="text-emerald-400" />
+              {text}
+            </span>
+          ) : '-'}
+        </span>
       ),
     },
     {
-      title: '记录数',
+      title: '原始记录数',
       dataIndex: 'recordCount',
       key: 'recordCount',
-      width: 120,
+      width: 110,
       render: (value: number) => (
         <span className="text-white font-mono">{formatNumber(value)}</span>
+      ),
+    },
+    {
+      title: '清洗后数',
+      dataIndex: 'cleanedCount',
+      key: 'cleanedCount',
+      width: 110,
+      render: (value: number | undefined, record: ImportRecord) => (
+        <div>
+          <span className="text-emerald-400 font-mono">
+            {formatNumber(value ?? Math.floor(record.recordCount * 0.95))}
+          </span>
+          <div className="text-xs text-gray-500">
+            有效率 {formatPercent(((value ?? record.recordCount) / record.recordCount) * 100)}
+          </div>
+        </div>
       ),
     },
     {
@@ -284,7 +394,9 @@ export default function DataIngestion() {
       dataIndex: 'operator',
       key: 'operator',
       width: 120,
-      render: (text: string) => <span className="text-gray-400">{getTypeName(text)}</span>,
+      render: (text: string) => (
+        <Tag color="blue">{getTypeName(text)}</Tag>
+      ),
     },
     {
       title: '导入时间',
@@ -328,7 +440,7 @@ export default function DataIngestion() {
         type="info"
         showIcon
         message="实时数据接入"
-        description="系统实时接入招生录取、报到注册、课程成绩、毕业及就业签约数据，自动清洗并按多维度聚合。支持手动触发数据同步。"
+        description="系统实时接入招生录取、报到注册、课程成绩、毕业及就业签约数据，自动清洗并按多维度聚合。支持手动触发数据同步或上传文件导入。"
         className="bg-blue-500/10 border-blue-500/30"
       />
 
@@ -564,6 +676,18 @@ export default function DataIngestion() {
 
             <div className="flex justify-end gap-3">
               <Button
+                icon={<Upload size={16} />}
+                onClick={() => {
+                  setDetailModalVisible(false);
+                  handleOpenImport(selectedSource);
+                }}
+                disabled={selectedSource.status !== 'active'}
+                ghost
+                type="primary"
+              >
+                上传导入
+              </Button>
+              <Button
                 icon={<RefreshCw size={16} />}
                 onClick={() => handleRunImport(selectedSource.id)}
                 loading={runningImport === selectedSource.id}
@@ -582,6 +706,225 @@ export default function DataIngestion() {
                 立即导入
               </Button>
             </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <FileSpreadsheet size={20} className="text-emerald-400" />
+            <span>手动导入 - {importingSource?.name}</span>
+          </div>
+        }
+        open={importModalVisible}
+        onCancel={handleCloseImportModal}
+        footer={null}
+        width={720}
+        destroyOnClose
+      >
+        {importingSource && (
+          <div className="space-y-6">
+            <Steps
+              size="small"
+              current={importStep}
+              items={[
+                { title: '准备', icon: <FileSpreadsheet size={16} /> },
+                { title: '解析', icon: <Upload size={16} /> },
+                { title: '清洗', icon: <ShieldCheck size={16} /> },
+                { title: '完成', icon: <CheckCircle size={16} /> },
+              ]}
+              className="mb-4"
+            />
+
+            {importStep <= 1 && (
+              <div className="space-y-4">
+                <Alert
+                  type="info"
+                  showIcon
+                  message="导入说明"
+                  description={`本步骤将导入 ${getTypeName(importingSource.type)} 数据。支持上传 Excel (.xlsx)、CSV 文件，或直接生成模拟数据。导入完成后将自动执行清洗并更新看板聚合指标。`}
+                  className="bg-blue-500/10 border-blue-500/30"
+                />
+
+                <div
+                  className="border-2 border-dashed border-slate-600 hover:border-blue-500 rounded-lg p-8 text-center transition-colors cursor-pointer bg-slate-800/30"
+                  onClick={() => message.info('文件上传已触发（前端模拟，将使用配置参数生成模拟数据）')}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload size={40} className="text-blue-400" />
+                    <div className="text-white font-medium">点击或拖拽文件到此处上传</div>
+                    <div className="text-xs text-gray-400">支持 .xlsx, .xls, .csv 格式，单文件不超过 50MB</div>
+                  </div>
+                </div>
+
+                <Divider plain className="text-gray-500 text-xs">或者生成模拟数据</Divider>
+
+                <Form form={importForm} layout="vertical">
+                  <Row gutter={[16, 0]}>
+                    <Col xs={12}>
+                      <Form.Item
+                        label={<span className="text-gray-300">模拟记录数</span>}
+                        name="recordCount"
+                        rules={[{ required: true, message: '请输入记录数' }]}
+                      >
+                        <InputNumber
+                          className="w-full"
+                          min={100}
+                          max={100000}
+                          step={1000}
+                          formatter={(value) => value && `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={12}>
+                      <Form.Item
+                        label={<span className="text-gray-300">文件名</span>}
+                        name="fileName"
+                        rules={[{ required: true, message: '请输入文件名' }]}
+                      >
+                        <Select
+                          className="w-full"
+                          placeholder="选择或输入文件名"
+                          dropdownRender={(menu) => (
+                            <>
+                              {menu}
+                              <Divider plain style={{ margin: '8px 0' }} />
+                              <div className="p-2 text-xs text-gray-400 flex items-center gap-1">
+                                <FileSpreadsheet size={12} />
+                                将生成模拟文件进行导入
+                              </div>
+                            </>
+                          )}
+                          options={[
+                            { value: `${importingSource.name}_batch_001.xlsx`, label: `${importingSource.name}_batch_001.xlsx` },
+                            { value: `${importingSource.name}_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`, label: `今日数据_${new Date().toISOString().slice(0, 10)}.xlsx` },
+                            { value: `${getTypeName(importingSource.type)}_汇总_${Date.now().toString().slice(-6)}.csv`, label: `历史汇总_${Date.now().toString().slice(-6)}.csv` },
+                          ]}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </Form>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button onClick={handleCloseImportModal}>取消</Button>
+                  <Button
+                    type="primary"
+                    icon={<Upload size={16} />}
+                    loading={importStep > 0}
+                    onClick={handleSubmitImport}
+                    className="bg-gradient-to-r from-blue-500 to-emerald-500 border-0"
+                  >
+                    开始导入
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {importStep >= 2 && importResult && (
+              <div className="space-y-4">
+                <div className="bg-slate-800/50 rounded-lg p-5 border border-slate-700/50">
+                  <h4 className="text-white font-semibold mb-4 flex items-center gap-2">
+                    <BarChart3 size={16} className="text-emerald-400" />
+                    清洗结果
+                  </h4>
+                  <Row gutter={[16, 16]}>
+                    <Col xs={6}>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-white font-mono">
+                          {formatNumber(importResult.count)}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">原始记录</div>
+                      </div>
+                    </Col>
+                    <Col xs={6}>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-emerald-400 font-mono">
+                          {formatNumber(importResult.cleanedCount)}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">有效入库</div>
+                        <Progress
+                          percent={Number((importResult.cleanedCount / importResult.count * 100).toFixed(1))}
+                          size="small"
+                          showInfo={false}
+                          strokeColor="#10b981"
+                          className="mt-2"
+                        />
+                      </div>
+                    </Col>
+                    <Col xs={6}>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-orange-400 font-mono">
+                          {formatNumber(importResult.duplicateCount)}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">重复过滤</div>
+                      </div>
+                    </Col>
+                    <Col xs={6}>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-red-400 font-mono">
+                          {formatNumber(importResult.invalidCount)}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">无效丢弃</div>
+                      </div>
+                    </Col>
+                  </Row>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-lg p-5 border border-blue-500/20">
+                  <h4 className="text-white font-semibold mb-4 flex items-center gap-2">
+                    <ChevronRight size={16} className="text-blue-400" />
+                    聚合指标联动变化（前 {getMetricSummary().length} 项）
+                  </h4>
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {getMetricSummary().length === 0 ? (
+                      <div className="text-center py-8 text-gray-500 text-sm">暂无指标变化</div>
+                    ) : (
+                      getMetricSummary().map((m) => (
+                        <div
+                          key={m.key}
+                          className="flex items-center justify-between bg-slate-900/50 rounded-md p-3 border border-slate-700/30"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Tag color="blue" className="text-xs">{m.entity}</Tag>
+                            <span className="text-white text-sm">{m.metric}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-gray-400 font-mono text-xs">
+                              {m.metric === '招生人数' ? formatNumber(m.old) : formatPercent(m.old)}
+                            </span>
+                            <ChevronRight size={12} className="text-gray-500" />
+                            <span className="text-white font-mono text-xs">
+                              {m.metric === '招生人数' ? formatNumber(m.new) : formatPercent(m.new)}
+                            </span>
+                            <span className={`text-xs font-semibold ${m.delta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {m.delta >= 0 ? '+' : ''}{m.metric === '招生人数' ? formatNumber(m.delta) : `${m.delta}%`}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {importStep >= 3 && (
+                  <Alert
+                    type="success"
+                    showIcon
+                    message="导入完成"
+                    description="数据已成功入库，看板、预警中心的指标和列表已同步更新。"
+                    className="bg-emerald-500/10 border-emerald-500/30"
+                  />
+                )}
+
+                <div className="flex justify-end pt-2">
+                  <Button type="primary" onClick={handleCloseImportModal}>
+                    完成
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Modal>
